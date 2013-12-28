@@ -66,10 +66,8 @@ void setup(void)
 
 void loop(void)
 {
-  delay(500);
   // Pump the network regularly
   network.update();
-
     while (network.available() ) 
       {
        Serial.println("Got message");

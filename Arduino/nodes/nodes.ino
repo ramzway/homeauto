@@ -28,7 +28,7 @@ const int voltage_pin = 3; // analog
 // 1.1V internal reference after 1M/470k divider, in 8-bit fixed point
 const unsigned voltage_reference = 0x371;
 
-const unsigned num_measurements = 8;
+const unsigned num_measurements = 64;
 
 // nRF24L01(+) radio attached using Getting Started board 
 RF24 radio(rf_ce, rf_csn);
@@ -75,6 +75,7 @@ unsigned long getTemperature() {
     // C = reading * 1.1
     // C = ( V - 1/2 ) * 100
     return ( ( ( reading * 0x120 ) - 0x800000 ) * 0x64 ) >> 16;
+//    return reading;
 }
 
 unsigned long getVoltage() { 
@@ -132,31 +133,30 @@ void loop(void)
   // Pump the network regularly
   network.update();
 
+  command_t command; 
 
   // Is there anything ready for us?
-  while ( network.available() )
-  {
+  while ( network.available() ) {
     // If so, grab it and print it out
     RF24NetworkHeader header;
     network.read(header,&command,sizeof(command));
-    response_t response;
-    command_t command; 
-    if (command.commandtype == 7) // Probe 
-    {
-      response.messageid = currentmessageid;
-      currentmessageid = currentmessageid + 1;
-    }
-    RF24NetworkHeader responseheader(/*to node*/ 1);
-    response.temperature = currenttemperature;
-    response.battvoltage = currentvoltage;
-    bool ok = network.write(responseheader, &response, sizeof(response));
   }
   
-  if (millis() > currenttime + 3600000) // Update every minute or so
-  {
+  if (millis() > currenttime + 3600000) { // Update every minute or so 
     currenttemperature = getTemperature();
     currentvoltage = getVoltage(); 
     currenttime = millis();
   }
+
+  response_t response;
+  if (command.commandtype == 7) { // Probe 
+    response.messageid = currentmessageid;
+    currentmessageid = currentmessageid + 1;
+  }
+
+  RF24NetworkHeader responseheader(/*to node*/ 1);
+  response.temperature = currenttemperature;
+  response.battvoltage = currentvoltage;
+  bool ok = network.write(responseheader, &response, sizeof(response));
 }
 
